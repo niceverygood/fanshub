@@ -12,10 +12,12 @@ import { Notifications } from './components/Notifications';
 import { Messages } from './components/Messages';
 import { CardRegistrationForm } from './components/CardRegistrationForm';
 import { EarningsManagement } from './components/EarningsManagement';
+import LoginPage from './components/LoginPage';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
 import { Search } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
 const mockFeeds = [
   {
@@ -137,7 +139,8 @@ const recommendedCreators = [
 ];
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'myprofile' | 'create' | 'notifications' | 'collections' | 'subscriptions' | 'messages' | 'cards' | 'earnings' | 'feedDetail' | 'help' | 'privacy'>('home');
+  const { user, loading, signOut } = useAuth();
+  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'myprofile' | 'create' | 'notifications' | 'collections' | 'subscriptions' | 'messages' | 'cards' | 'earnings' | 'feedDetail' | 'help' | 'privacy' | 'login'>('home');
   const [selectedCreator, setSelectedCreator] = useState<any>(null);
   const [selectedFeed, setSelectedFeed] = useState<any>(null);
   const [subscribedCreators, setSubscribedCreators] = useState<any[]>([]);
@@ -150,6 +153,20 @@ export default function App() {
   
   // 읽지 않은 메시지 수 (실제로는 백엔드에서 가져올 값)
   const unreadMessagesCount = 4;
+
+  // 로딩 중일 때 표시
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-lg">로딩 중...</div>
+      </div>
+    );
+  }
+
+  // 로그인되지 않은 경우 로그인 페이지 표시
+  if (!user) {
+    return <LoginPage />;
+  }
   
   // 검색 핸들러
   const handleSearch = (query: string) => {

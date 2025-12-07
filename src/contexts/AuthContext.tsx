@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, userData: { username: string; name: string }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
 }
@@ -54,17 +55,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for:', userId);
+      
+      // 먼저 기존 프로필 조회
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      setUser(data);
+      console.log('Profile fetch result:', { data, error });
+
+      if (error && error.code === 'PGRST116') {
+        // 프로필이 없으면 자동 생성 (Google 로그인 등 OAuth 사용자)
+        console.log('Profile not found, creating new profile...');
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          const email = authUser.email || '';
+          const name = authUser.user_metadata?.full_name || 
+                       authUser.user_metadata?.name || 
+                       email.split('@')[0];
+          const username = email.split('@')[0] + '_' + Date.now().toString(36);
+          const avatarUrl = authUser.user_metadata?.avatar_url || 
+                            authUser.user_metadata?.picture || null;
+
+          console.log('Creating profile with:', { id: userId, email, username, name, avatarUrl });
+
+          const { data: newProfile, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email,
+              username,
+              name,
+              avatar_url: avatarUrl,
+            })
+            .select()
+            .single();
+
+          console.log('Insert result:', { newProfile, insertError });
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError);
+            // 에러가 있어도 로그인은 계속 진행 (user는 null로 유지)
+          } else {
+            setUser(newProfile);
+          }
+        }
+      } else if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        setUser(data);
+      }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error in fetchUserProfile:', error);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -99,6 +146,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) throw error;
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -128,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signUp,
         signIn,
+        signInWithGoogle,
         signOut,
         updateProfile,
       }}
