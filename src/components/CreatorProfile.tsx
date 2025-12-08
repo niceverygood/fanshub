@@ -43,6 +43,7 @@ interface CreatorProfileProps {
     onSubscribe?: (creator: any, tier?: any) => void;
   };
   onBack: () => void;
+  onFeedClick?: (feed: any) => void;
 }
 
 interface PostData {
@@ -55,7 +56,7 @@ interface PostData {
   text?: string;
 }
 
-export function CreatorProfile({ creator, onBack }: CreatorProfileProps) {
+export function CreatorProfile({ creator, onBack, onFeedClick }: CreatorProfileProps) {
   const [activeTab, setActiveTab] = useState('all');
   const [unlockedPosts, setUnlockedPosts] = useState<Set<string>>(new Set());
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
@@ -158,8 +159,32 @@ export function CreatorProfile({ creator, onBack }: CreatorProfileProps) {
     const isUnlocked = unlockedPosts.has(post.id);
     const shouldBlur = post.isLocked && !isUnlocked;
 
+    const handlePostClick = () => {
+      if (!shouldBlur && onFeedClick) {
+        onFeedClick({
+          creator: {
+            name: creator.name,
+            username: creator.username,
+            avatar: creator.avatar,
+            verified: creator.verified,
+          },
+          content: {
+            text: post.text,
+            image: post.image,
+          },
+          timestamp: post.timestamp,
+          isBlurred: false,
+          likes: post.likes,
+        });
+      }
+    };
+
     return (
-      <Card key={post.id} className="bg-card border-border overflow-hidden">
+      <Card 
+        key={post.id} 
+        className="bg-card border-border overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={handlePostClick}
+      >
         <div className="relative">
           <ImageWithFallback
             src={post.image}

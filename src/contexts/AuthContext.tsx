@@ -24,20 +24,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
+    // 5초 타임아웃 - 너무 오래 걸리면 강제로 로딩 종료
+    const timeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.log('Auth timeout - forcing loading to false');
+        setLoading(false);
+      }
+    }, 5000);
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!isMounted) return;
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session);
       setAuthUser(session?.user ?? null);
+      
       if (session?.user) {
         fetchUserProfile(session.user.id);
       } else {
         setLoading(false);
       }
+    }).catch((error) => {
+      console.error('Session fetch error:', error);
+      if (isMounted) setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
+        console.log('Auth state changed:', event);
         setSession(session);
         setAuthUser(session?.user ?? null);
         
@@ -45,25 +70,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchUserProfile(session.user.id);
         } else {
           setUser(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+    );
+
     try {
       console.log('Fetching user profile for:', userId);
       
-      // 먼저 기존 프로필 조회
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // 타임아웃과 함께 프로필 조회
+      const result = await Promise.race([
+        supabase.from('users').select('*').eq('id', userId).single(),
+        timeoutPromise
+      ]) as any;
 
+      const { data, error } = result;
       console.log('Profile fetch result:', { data, error });
 
       if (error && error.code === 'PGRST116') {
@@ -98,7 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError);
-            // 에러가 있어도 로그인은 계속 진행 (user는 null로 유지)
           } else {
             setUser(newProfile);
           }

@@ -430,6 +430,10 @@ export default function App() {
             <CreatorProfile 
               creator={selectedCreator} 
               onBack={handleBackToHome}
+              onFeedClick={(feed) => {
+                setSelectedFeed(feed);
+                setCurrentView('feedDetail');
+              }}
             />
           </div>
         </div>
@@ -440,6 +444,10 @@ export default function App() {
             <CreatorProfile 
               creator={selectedCreator} 
               onBack={handleBackToHome}
+              onFeedClick={(feed) => {
+                setSelectedFeed(feed);
+                setCurrentView('feedDetail');
+              }}
             />
           </div>
           <BottomNavigation currentView={currentView} onMenuClick={handleMenuClick} />
