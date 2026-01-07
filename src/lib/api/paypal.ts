@@ -325,6 +325,80 @@ export async function rejectAdminPayout(payoutId: string, reason?: string) {
   return result;
 }
 
+// ============================================
+// 콘텐츠 구매 & 구독 확인
+// ============================================
+
+// 콘텐츠 구매 여부 확인
+export async function hasPurchasedContent(userId: string, feedId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('content_purchases')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('feed_id', feedId)
+    .single();
+
+  return !error && !!data;
+}
+
+// 구독 여부 확인
+export async function isSubscribedTo(userId: string, creatorId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('creator_id', creatorId)
+    .eq('status', 'active')
+    .gte('current_period_end', new Date().toISOString())
+    .single();
+
+  return !error && !!data;
+}
+
+// 사용자의 구매한 콘텐츠 목록
+export async function getPurchasedContents(userId: string) {
+  const { data, error } = await supabase
+    .from('content_purchases')
+    .select(`
+      *,
+      feed:feeds (*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// 사용자의 활성 구독 목록
+export async function getActiveSubscriptions(userId: string) {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(`
+      *,
+      creator:users!creator_id (id, name, username, avatar_url),
+      tier:subscription_tiers (id, name, price, benefits)
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .gte('current_period_end', new Date().toISOString());
+
+  if (error) throw error;
+  return data || [];
+}
+
+// 월정산 내역 조회 (크리에이터용)
+export async function getMonthlySettlements(creatorId: string) {
+  const { data, error } = await supabase
+    .from('monthly_settlements')
+    .select('*')
+    .eq('creator_id', creatorId)
+    .order('year_month', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 // 관리자: 정산 통계 조회
 export async function getAdminPayoutStats() {
   const { data: { session } } = await supabase.auth.getSession();

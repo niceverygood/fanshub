@@ -4,9 +4,20 @@ export const PAYPAL_CONFIG = {
   // Sandbox or Live
   mode: (import.meta as any).env?.VITE_PAYPAL_MODE || 'sandbox',
   currency: 'USD',
-  // 플랫폼 수수료 (10%)
-  platformFeePercent: 10,
+  // 플랫폼 수수료 (30%) - 크리에이터 70%, FansHub 30%
+  platformFeePercent: 30,
 };
+
+// 결제 타입
+export type PaymentType = 'subscription' | 'content' | 'tip';
+
+export interface PaymentItem {
+  id: string;
+  type: PaymentType;
+  creatorId: string;
+  amount: number;
+  description: string;
+}
 
 // PayPal Script URL
 export const getPayPalScriptUrl = () => {
