@@ -69,23 +69,21 @@ export function Sidebar({ currentView = 'home', onMenuClick, unreadNotifications
             </li>
           ))}
           
-          {/* 관리자 메뉴 */}
-          {isAdmin && (
-            <li>
-              <Button
-                variant={currentView === 'admin' ? "default" : "ghost"}
-                className={`w-full justify-start gap-3 h-12 ${
-                  currentView === 'admin' 
-                    ? 'bg-red-600 text-white hover:bg-red-700' 
-                    : 'text-red-400 hover:bg-red-500/10'
-                }`}
-                onClick={() => onMenuClick?.('admin')}
-              >
-                <Shield className="h-5 w-5" />
-                <span className="flex-1 text-left">관리자</span>
-              </Button>
-            </li>
-          )}
+          {/* 관리자 메뉴 - 항상 표시 (별도 로그인 필요) */}
+          <li>
+            <Button
+              variant={currentView === 'admin' ? "default" : "ghost"}
+              className={`w-full justify-start gap-3 h-12 ${
+                currentView === 'admin' 
+                  ? 'bg-red-600 text-white hover:bg-red-700' 
+                  : 'text-red-400 hover:bg-red-500/10'
+              }`}
+              onClick={() => onMenuClick?.('admin')}
+            >
+              <Shield className="h-5 w-5" />
+              <span className="flex-1 text-left">관리자</span>
+            </Button>
+          </li>
         </ul>
       </nav>
 

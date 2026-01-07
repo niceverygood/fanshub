@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { 
   ArrowLeft, 
   Users, 
@@ -20,7 +21,9 @@ import {
   RefreshCw,
   Loader2,
   BarChart3,
-  Calendar
+  Calendar,
+  Shield,
+  Lock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -31,6 +34,12 @@ import {
   DialogTitle,
   DialogDescription 
 } from './ui/dialog';
+
+// 하드코딩된 관리자 계정
+const ADMIN_CREDENTIALS = {
+  username: 'niceverygood',
+  password: 'Woqjf123!'
+};
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -96,9 +105,43 @@ interface DashboardStats {
 }
 
 export function AdminDashboard({ onBack }: AdminDashboardProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 세션 스토리지에서 로그인 상태 확인
+  useEffect(() => {
+    const adminAuth = sessionStorage.getItem('adminAuth');
+    if (adminAuth === 'true') {
+      setIsAuthenticated(true);
+      loadDashboardData();
+    }
+  }, []);
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    
+    if (loginUsername === ADMIN_CREDENTIALS.username && loginPassword === ADMIN_CREDENTIALS.password) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('adminAuth', 'true');
+      toast.success('관리자 로그인 성공!');
+      loadDashboardData();
+    } else {
+      setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.');
+      toast.error('로그인 실패');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('adminAuth');
+    toast.info('관리자 로그아웃 되었습니다.');
+  };
   
   const [stats, setStats] = useState<DashboardStats>({
     totalCreators: 0,
@@ -331,6 +374,62 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     c.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // 관리자 로그인 화면
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+              <Shield className="h-8 w-8 text-red-500" />
+            </div>
+            <CardTitle className="text-2xl">관리자 로그인</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              관리자 계정으로 로그인해주세요.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-username">아이디</Label>
+                <Input
+                  id="admin-username"
+                  type="text"
+                  placeholder="관리자 아이디"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">비밀번호</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="비밀번호"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                />
+              </div>
+              {loginError && (
+                <p className="text-sm text-red-500 text-center">{loginError}</p>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={onBack}>
+                  취소
+                </Button>
+                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                  <Lock className="h-4 w-4 mr-2" />
+                  로그인
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -353,10 +452,15 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               <p className="text-sm text-muted-foreground">FansHub 관리</p>
             </div>
           </div>
-          <Button onClick={loadDashboardData} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            새로고침
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={loadDashboardData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              새로고침
+            </Button>
+            <Button onClick={handleAdminLogout} variant="destructive" size="sm">
+              로그아웃
+            </Button>
+          </div>
         </div>
       </div>
 
