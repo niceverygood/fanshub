@@ -6,4 +6,8 @@ export * from './messages';
 export * from './notifications';
 export * from './payments';
 export * from './comments';
+export * from './paypal';
+
+
+
 

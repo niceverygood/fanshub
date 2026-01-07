@@ -102,3 +102,6 @@ INSERT INTO public.payment_cards (user_id, last4, brand, exp_month, exp_year, ca
   ('55555555-5555-5555-5555-555555555555', '1234', 'Visa', 12, 2025, 'Your Name', true),
   ('55555555-5555-5555-5555-555555555555', '5678', 'Mastercard', 8, 2026, 'Your Name', false);
 
+
+
+
