@@ -4,6 +4,10 @@
 ALTER TABLE public.users 
 ADD COLUMN IF NOT EXISTS paypal_email TEXT;
 
+-- users 테이블에 is_admin 컬럼 추가
+ALTER TABLE public.users 
+ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+
 -- 정산(Payouts) 테이블
 CREATE TABLE IF NOT EXISTS public.payouts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

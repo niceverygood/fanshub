@@ -1,6 +1,12 @@
 import { supabase } from '../supabase';
 import { calculatePlatformFee, calculateCreatorEarnings, PayoutRecord, PayoutStatus } from '../paypal';
 
+// Edge Function 호출을 위한 베이스 URL
+const getEdgeFunctionUrl = (functionName: string) => {
+  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+  return `${supabaseUrl}/functions/v1/${functionName}`;
+};
+
 // 크리에이터 PayPal 계정 연동
 export async function linkPayPalAccount(userId: string, paypalEmail: string) {
   const { data, error } = await supabase
@@ -211,3 +217,136 @@ export async function getMonthlyEarningsStats(creatorId: string, months: number 
   return monthlyStats;
 }
 
+// ============================================
+// Edge Function 호출 (관리자용)
+// ============================================
+
+// 정산 처리 (PayPal로 송금)
+export async function processPayout(payoutId: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const response = await fetch(getEdgeFunctionUrl('process-payout'), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ payoutId }),
+  });
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '정산 처리에 실패했습니다.');
+  }
+
+  return result;
+}
+
+// 관리자: 대기중인 정산 목록 조회
+export async function getAdminPayoutList() {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const response = await fetch(getEdgeFunctionUrl('admin-payout'), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'list' }),
+  });
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '목록 조회에 실패했습니다.');
+  }
+
+  return result.payouts;
+}
+
+// 관리자: 정산 승인
+export async function approveAdminPayout(payoutId: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const response = await fetch(getEdgeFunctionUrl('admin-payout'), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'approve', payoutId }),
+  });
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '정산 승인에 실패했습니다.');
+  }
+
+  return result;
+}
+
+// 관리자: 정산 거부
+export async function rejectAdminPayout(payoutId: string, reason?: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const response = await fetch(getEdgeFunctionUrl('admin-payout'), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'reject', payoutId, reason }),
+  });
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '정산 거부에 실패했습니다.');
+  }
+
+  return result;
+}
+
+// 관리자: 정산 통계 조회
+export async function getAdminPayoutStats() {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const response = await fetch(getEdgeFunctionUrl('admin-payout'), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'stats' }),
+  });
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '통계 조회에 실패했습니다.');
+  }
+
+  return result.stats;
+}
