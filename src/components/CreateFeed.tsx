@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -20,6 +20,7 @@ interface CreateFeedProps {
 
 export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
   const { user } = useAuth();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [feedContent, setFeedContent] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('free');
   const [isPaidFeed, setIsPaidFeed] = useState(false);
@@ -99,13 +100,20 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
     console.log('=== handlePost called ===');
     console.log('User:', user);
     
+    // Get content from ref (DOM) or state - DOM takes priority for external input tools
+    const contentFromRef = textareaRef.current?.value || '';
+    const content = contentFromRef || feedContent;
+    console.log('Content from ref:', contentFromRef);
+    console.log('Content from state:', feedContent);
+    console.log('Final content:', content);
+    
     if (!user) {
       console.error('User is null!');
       toast.error('로그인이 필요합니다. 페이지를 새로고침해주세요.');
       return;
     }
 
-    if (!feedContent.trim() && selectedMedia.length === 0) {
+    if (!content.trim() && selectedMedia.length === 0) {
       toast.error('내용이나 미디어를 추가해주세요.');
       return;
     }
@@ -140,7 +148,7 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
 
       const feedData = {
         creator_id: user.id,
-        content_text: feedContent || null,
+        content_text: content || null,
         media_urls: mediaUrls.length > 0 ? mediaUrls : null,
         media_type: mediaTypes.length > 0 ? (mediaTypes.includes('video') ? 'video' : 'image') as 'image' | 'video' : null,
         is_premium: isPaidFeed || visibility !== 'free',
@@ -206,12 +214,13 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
           <Button 
             onClick={() => {
               console.log('Button clicked!');
-              console.log('feedContent:', feedContent);
+              console.log('feedContent (state):', feedContent);
+              console.log('feedContent (ref):', textareaRef.current?.value);
               console.log('selectedMedia:', selectedMedia.length);
               console.log('isSubmitting:', isSubmitting);
               handlePost();
             }}
-            disabled={isSubmitting || (!feedContent.trim() && selectedMedia.length === 0)}
+            disabled={isSubmitting}
             className="bg-primary hover:bg-primary/90"
           >
             {isSubmitting ? (
@@ -235,6 +244,7 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
             </CardHeader>
             <CardContent>
               <Textarea
+                ref={textareaRef}
                 value={feedContent}
                 onChange={(e) => setFeedContent(e.target.value)}
                 placeholder="무슨 일이 일어나고 있나요?"
