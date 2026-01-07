@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -27,9 +27,12 @@ import {
   Play,
   Video,
   Image,
-  Film
+  Film,
+  Loader2
 } from 'lucide-react';
 import { AddCardDialog } from './AddCardDialog';
+import { useAuth } from '../contexts/AuthContext';
+import { getCreatorFeeds } from '../lib/api/feeds';
 
 interface MyProfileProps {
   onBack: () => void;
@@ -39,12 +42,26 @@ interface MyProfileProps {
   onLogout?: () => void;
 }
 
+interface FeedPost {
+  id: string;
+  image?: string;
+  video?: string;
+  mediaType?: 'image' | 'video';
+  visibility: string;
+  price: number | null;
+  likes: number;
+  content?: string;
+}
+
 export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick, onLogout }: MyProfileProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('posts');
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [myPosts, setMyPosts] = useState<FeedPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [cards, setCards] = useState([
     {
       id: '1',
@@ -64,20 +81,73 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
     }
   ]);
 
+  // 내 피드 가져오기
+  const fetchMyFeeds = async () => {
+    if (!user?.id) return;
+    
+    setIsLoading(true);
+    try {
+      console.log('Fetching feeds for user:', user.id);
+      const feeds = await getCreatorFeeds(user.id);
+      console.log('Fetched feeds:', feeds);
+      
+      const formattedPosts: FeedPost[] = feeds.map(feed => ({
+        id: feed.id,
+        image: feed.media_urls?.[0] || undefined,
+        video: feed.media_type === 'video' ? feed.media_urls?.[0] : undefined,
+        mediaType: feed.media_type as 'image' | 'video' | undefined,
+        visibility: feed.is_premium ? 'paid' : 'free',
+        price: feed.price || null,
+        likes: feed.likes_count || 0,
+        content: feed.content_text || '',
+      }));
+      
+      setMyPosts(formattedPosts);
+    } catch (error) {
+      console.error('Error fetching feeds:', error);
+      toast.error('피드를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyFeeds();
+  }, [user?.id]);
+
   const [myProfile, setMyProfile] = useState({
-    name: 'Your Name',
-    username: 'yourname',
-    avatar: 'https://images.unsplash.com/photo-1551929175-f82f676827b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwd29tYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2NzUxNTN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    coverImage: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    bio: '안녕하세요! 저의 페이지에 방문해 주셔서 감사합니다. 다양한 콘텐츠를 공유하고 있어요 💕',
-    verified: true,
+    name: user?.name || 'Your Name',
+    username: user?.username || 'yourname',
+    avatar: user?.avatar_url || 'https://images.unsplash.com/photo-1551929175-f82f676827b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwd29tYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2NzUxNTN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    coverImage: user?.cover_url || 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    bio: user?.bio || '안녕하세요! 저의 페이지에 방문해 주셔서 감사합니다. 다양한 콘텐츠를 공유하고 있어요 💕',
+    verified: user?.is_verified || false,
     stats: {
-      posts: 156,
-      media: 892,
-      subscribers: 1248,
-      earnings: 3420
+      posts: myPosts.length,
+      media: 0,
+      subscribers: 0,
+      earnings: 0
     }
   });
+
+  // 사용자 정보가 변경될 때 프로필 업데이트
+  useEffect(() => {
+    if (user) {
+      setMyProfile(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        username: user.username || prev.username,
+        avatar: user.avatar_url || prev.avatar,
+        coverImage: user.cover_url || prev.coverImage,
+        bio: user.bio || prev.bio,
+        verified: user.is_verified || prev.verified,
+        stats: {
+          ...prev.stats,
+          posts: myPosts.length,
+        }
+      }));
+    }
+  }, [user, myPosts.length]);
 
   const handleProfileUpdate = (updatedProfile: any) => {
     setMyProfile(prev => ({
@@ -86,46 +156,6 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
     }));
     toast.success('프로필이 수정되었습니다!');
   };
-
-  const myPosts = [
-    {
-      id: '1',
-      image: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      visibility: 'gold' as const,
-      price: null,
-      likes: 45
-    },
-    {
-      id: '2',
-      video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      mediaType: 'video' as const,
-      visibility: 'paid' as const,
-      price: 20,
-      likes: 89
-    },
-    {
-      id: '3',
-      image: 'https://images.unsplash.com/photo-1551929175-f82f676827b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwd29tYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2NzUxNTN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      visibility: 'paid' as const,
-      price: 15,
-      likes: 67
-    },
-    {
-      id: '4',
-      image: 'https://images.unsplash.com/photo-1624948456761-0f2660d3dc5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMGluZmx1ZW5jZXIlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2MjI4MTB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      visibility: 'free' as const,
-      price: null,
-      likes: 23
-    },
-    {
-      id: '5',
-      video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      mediaType: 'video' as const,
-      visibility: 'silver' as const,
-      price: null,
-      likes: 134
-    }
-  ];
 
   const getVisibilityBadge = (visibility: string, price?: number | null) => {
     if (price) {
@@ -147,7 +177,11 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
     return (
       <CreatePost 
         onBack={() => setShowCreatePost(false)}
-        onPost={() => setShowCreatePost(false)}
+        onPost={() => {
+          setShowCreatePost(false);
+          // 피드 새로고침
+          fetchMyFeeds();
+        }}
       />
     );
   }
@@ -266,44 +300,67 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
         </TabsList>
 
         <TabsContent value="posts" className="mt-6">
-          <div className="grid grid-cols-3 gap-1">
-            {myPosts.map((post) => (
-              <div key={post.id} className="relative group">
-                {post.video || post.mediaType === 'video' ? (
-                  <div className="relative">
-                    <video
-                      src={post.video || post.image}
-                      className="w-full aspect-square object-cover rounded cursor-pointer group-hover:opacity-80 transition-opacity"
-                      muted
-                      preload="metadata"
-                    />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                        <Play className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                    <div className="absolute top-2 right-2">
-                      <div className="bg-black/60 backdrop-blur-sm rounded-full p-1">
-                        <Video className="h-3 w-3 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <ImageWithFallback
-                    src={post.image}
-                    alt="Post"
-                    className="w-full aspect-square object-cover rounded cursor-pointer group-hover:opacity-80 transition-opacity"
-                  />
-                )}
-                <div className="absolute top-2 left-2">
-                  {getVisibilityBadge(post.visibility, post.price)}
-                </div>
-                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                  ❤️ {post.likes}
-                </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">피드 불러오는 중...</span>
+            </div>
+          ) : myPosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Image className="h-8 w-8 text-muted-foreground" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-lg font-semibold mb-2">아직 피드가 없습니다</h3>
+              <p className="text-muted-foreground mb-4">첫 번째 피드를 작성해보세요!</p>
+              <Button onClick={() => setShowCreatePost(true)} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" />
+                새 피드 작성
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1">
+              {myPosts.map((post) => (
+                <div key={post.id} className="relative group">
+                  {post.video || post.mediaType === 'video' ? (
+                    <div className="relative">
+                      <video
+                        src={post.video || post.image}
+                        className="w-full aspect-square object-cover rounded cursor-pointer group-hover:opacity-80 transition-opacity"
+                        muted
+                        preload="metadata"
+                      />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                          <Play className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <div className="bg-black/60 backdrop-blur-sm rounded-full p-1">
+                          <Video className="h-3 w-3 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : post.image ? (
+                    <ImageWithFallback
+                      src={post.image}
+                      alt="Post"
+                      className="w-full aspect-square object-cover rounded cursor-pointer group-hover:opacity-80 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-full aspect-square bg-gradient-to-br from-primary/20 to-primary/5 rounded flex items-center justify-center p-4">
+                      <p className="text-sm text-foreground line-clamp-4 text-center">{post.content}</p>
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    {getVisibilityBadge(post.visibility, post.price)}
+                  </div>
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                    ❤️ {post.likes}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="media" className="mt-6">
