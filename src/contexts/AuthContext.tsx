@@ -83,35 +83,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
-    );
-
     try {
       console.log('Fetching user profile for:', userId);
       
-      // 타임아웃과 함께 프로필 조회
-      const result = await Promise.race([
-        supabase.from('users').select('*').eq('id', userId).single(),
-        timeoutPromise
-      ]) as any;
+      // 프로필 조회 (타임아웃 없이)
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      const { data, error } = result;
       console.log('Profile fetch result:', { data, error });
 
       if (error && error.code === 'PGRST116') {
         // 프로필이 없으면 자동 생성 (Google 로그인 등 OAuth 사용자)
         console.log('Profile not found, creating new profile...');
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: { user: currentAuthUser } } = await supabase.auth.getUser();
         
-        if (authUser) {
-          const email = authUser.email || '';
-          const name = authUser.user_metadata?.full_name || 
-                       authUser.user_metadata?.name || 
+        if (currentAuthUser) {
+          const email = currentAuthUser.email || '';
+          const name = currentAuthUser.user_metadata?.full_name || 
+                       currentAuthUser.user_metadata?.name || 
                        email.split('@')[0];
           const username = email.split('@')[0] + '_' + Date.now().toString(36);
-          const avatarUrl = authUser.user_metadata?.avatar_url || 
-                            authUser.user_metadata?.picture || null;
+          const avatarUrl = currentAuthUser.user_metadata?.avatar_url || 
+                            currentAuthUser.user_metadata?.picture || null;
 
           console.log('Creating profile with:', { id: userId, email, username, name, avatarUrl });
 
@@ -123,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               username,
               name,
               avatar_url: avatarUrl,
+              is_creator: true, // 기본적으로 크리에이터로 설정
             })
             .select()
             .single();
@@ -131,17 +128,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError);
+            // 프로필 생성 실패해도 기본 사용자 객체 설정
+            setUser({
+              id: userId,
+              email,
+              username,
+              name,
+              avatar_url: avatarUrl,
+              is_creator: true,
+              is_verified: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as any);
           } else {
             setUser(newProfile);
           }
         }
       } else if (error) {
         console.error('Error fetching profile:', error);
+        // 에러가 있어도 기본 사용자 객체 설정
+        const { data: { user: currentAuthUser } } = await supabase.auth.getUser();
+        if (currentAuthUser) {
+          setUser({
+            id: userId,
+            email: currentAuthUser.email || '',
+            username: currentAuthUser.email?.split('@')[0] || 'user',
+            name: currentAuthUser.user_metadata?.full_name || currentAuthUser.email?.split('@')[0] || 'User',
+            avatar_url: currentAuthUser.user_metadata?.avatar_url || null,
+            is_creator: true,
+            is_verified: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any);
+        }
       } else {
         setUser(data);
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      // 예외 발생해도 기본 사용자 객체 설정
+      const { data: { user: currentAuthUser } } = await supabase.auth.getUser();
+      if (currentAuthUser) {
+        setUser({
+          id: userId,
+          email: currentAuthUser.email || '',
+          username: currentAuthUser.email?.split('@')[0] || 'user',
+          name: currentAuthUser.user_metadata?.full_name || currentAuthUser.email?.split('@')[0] || 'User',
+          avatar_url: currentAuthUser.user_metadata?.avatar_url || null,
+          is_creator: true,
+          is_verified: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any);
+      }
     } finally {
       console.log('Setting loading to false');
       setLoading(false);

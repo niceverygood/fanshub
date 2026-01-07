@@ -91,8 +91,12 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
   };
 
   const handlePost = async () => {
+    console.log('=== handlePost called ===');
+    console.log('User:', user);
+    
     if (!user) {
-      toast.error('로그인이 필요합니다.');
+      console.error('User is null!');
+      toast.error('로그인이 필요합니다. 페이지를 새로고침해주세요.');
       return;
     }
 
@@ -102,16 +106,20 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
     }
 
     setIsSubmitting(true);
+    console.log('Starting feed creation...');
 
     try {
       // 미디어 업로드
       let mediaUrls: string[] = [];
       if (selectedMedia.length > 0) {
+        console.log('Uploading media files:', selectedMedia.length);
         const uploadPromises = selectedMedia.map(file => uploadMedia(file));
         const results = await Promise.all(uploadPromises);
         mediaUrls = results.filter((url): url is string => url !== null);
+        console.log('Uploaded media URLs:', mediaUrls);
         
         if (mediaUrls.length !== selectedMedia.length) {
+          console.warn('Some media uploads failed');
           toast.error('일부 미디어 업로드에 실패했습니다.');
         }
       }
@@ -135,6 +143,8 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
         required_tier_level: isPaidFeed ? 0 : visibilityToTierLevel[visibility] || 0
       };
 
+      console.log('Feed data to insert:', feedData);
+
       // 피드 생성
       const { data, error } = await supabase
         .from('feeds')
@@ -142,15 +152,22 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
         .select()
         .single();
 
+      console.log('Insert result:', { data, error });
+
       if (error) {
         console.error('Feed creation error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
         throw error;
       }
 
+      console.log('Feed created successfully:', data);
       toast.success('피드가 성공적으로 게시되었습니다!');
       onPost();
     } catch (error: any) {
       console.error('Post error:', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       toast.error(error.message || '피드 게시에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
