@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from './ui/switch';
 import { Badge } from './ui/badge';
 import { SUBSCRIPTION_TIERS, PostVisibility } from '../types/subscription';
-import { ArrowLeft, Upload, Image, Video, DollarSign, Users, Crown, Play, X } from 'lucide-react';
+import { ArrowLeft, Upload, Image, Video, DollarSign, Users, Crown, Play, X, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface CreateFeedProps {
   onBack: () => void;
@@ -16,6 +19,7 @@ interface CreateFeedProps {
 }
 
 export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
+  const { user } = useAuth();
   const [feedContent, setFeedContent] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('free');
   const [isPaidFeed, setIsPaidFeed] = useState(false);
@@ -23,6 +27,7 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
   const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<('image' | 'video')[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const visibilityOptions = [
     { value: 'free', label: 'Free', description: '누구나 볼 수 있음', icon: Users, color: '#6b7280' },
@@ -57,18 +62,99 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
     setMediaTypes(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePost = () => {
-    const feedData = {
-      content: feedContent,
-      visibility: isPaidFeed ? 'paid' : visibility,
-      price: isPaidFeed ? paidPrice : null,
-      media: selectedMedia,
-      mediaTypes: mediaTypes,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log('새 피드 작성:', feedData);
-    onPost();
+  const uploadMedia = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('feeds')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from('feeds')
+        .getPublicUrl(data.path);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
+  const handlePost = async () => {
+    if (!user) {
+      toast.error('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!feedContent.trim() && selectedMedia.length === 0) {
+      toast.error('내용이나 미디어를 추가해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 미디어 업로드
+      let mediaUrls: string[] = [];
+      if (selectedMedia.length > 0) {
+        const uploadPromises = selectedMedia.map(file => uploadMedia(file));
+        const results = await Promise.all(uploadPromises);
+        mediaUrls = results.filter((url): url is string => url !== null);
+        
+        if (mediaUrls.length !== selectedMedia.length) {
+          toast.error('일부 미디어 업로드에 실패했습니다.');
+        }
+      }
+
+      // 피드 데이터 준비
+      const visibilityToTierLevel: Record<string, number> = {
+        'free': 0,
+        'basic': 1,
+        'silver': 2,
+        'gold': 3,
+        'platinum': 4
+      };
+
+      const feedData = {
+        creator_id: user.id,
+        content_text: feedContent || null,
+        media_urls: mediaUrls.length > 0 ? mediaUrls : null,
+        media_type: mediaTypes.length > 0 ? (mediaTypes.includes('video') ? 'video' : 'image') as 'image' | 'video' : null,
+        is_premium: isPaidFeed || visibility !== 'free',
+        price: isPaidFeed ? paidPrice : null,
+        required_tier_level: isPaidFeed ? 0 : visibilityToTierLevel[visibility] || 0
+      };
+
+      // 피드 생성
+      const { data, error } = await supabase
+        .from('feeds')
+        .insert(feedData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Feed creation error:', error);
+        throw error;
+      }
+
+      toast.success('피드가 성공적으로 게시되었습니다!');
+      onPost();
+    } catch (error: any) {
+      console.error('Post error:', error);
+      toast.error(error.message || '피드 게시에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getVisibilityBadge = (vis: PostVisibility) => {
@@ -97,10 +183,17 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
           </div>
           <Button 
             onClick={handlePost}
-            disabled={!feedContent.trim() && selectedMedia.length === 0}
+            disabled={isSubmitting || (!feedContent.trim() && selectedMedia.length === 0)}
             className="bg-primary hover:bg-primary/90"
           >
-            게시하기
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                게시 중...
+              </>
+            ) : (
+              '게시하기'
+            )}
           </Button>
         </div>
       </div>
