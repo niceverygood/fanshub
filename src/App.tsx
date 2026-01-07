@@ -12,6 +12,7 @@ import { Notifications } from './components/Notifications';
 import { Messages } from './components/Messages';
 import { CardRegistrationForm } from './components/CardRegistrationForm';
 import { EarningsManagement } from './components/EarningsManagement';
+import { AdminDashboard } from './components/AdminDashboard';
 import LoginPage from './components/LoginPage';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
@@ -140,7 +141,8 @@ const recommendedCreators = [
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'myprofile' | 'create' | 'notifications' | 'collections' | 'subscriptions' | 'messages' | 'cards' | 'earnings' | 'feedDetail' | 'help' | 'privacy' | 'login'>('home');
+  const isAdmin = (user as any)?.is_admin === true;
+  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'myprofile' | 'create' | 'notifications' | 'collections' | 'subscriptions' | 'messages' | 'cards' | 'earnings' | 'feedDetail' | 'help' | 'privacy' | 'login' | 'admin'>('home');
   const [selectedCreator, setSelectedCreator] = useState<any>(null);
   const [selectedFeed, setSelectedFeed] = useState<any>(null);
   const [subscribedCreators, setSubscribedCreators] = useState<any[]>([]);
@@ -390,6 +392,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <FeedDetail 
@@ -425,6 +428,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <CreatorProfile 
@@ -466,6 +470,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <Notifications 
@@ -499,6 +504,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <MyProfile 
@@ -548,6 +554,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1 max-w-2xl mx-auto">
             <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border p-4 z-10">
@@ -637,6 +644,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1 max-w-2xl mx-auto">
             <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border p-4 z-10">
@@ -776,6 +784,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <Messages onBack={handleBackToHome} onProfileClick={handleViewProfile} />
@@ -803,6 +812,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <CreateFeed 
@@ -841,6 +851,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <CardRegistrationForm 
@@ -880,6 +891,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1">
             <EarningsManagement onBack={handleBackToHome} />
@@ -897,6 +909,35 @@ export default function App() {
     );
   }
 
+  // 관리자 페이지
+  if (currentView === 'admin') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex">
+          <Sidebar 
+            currentView="home"
+            onMenuClick={handleMenuClick}
+            unreadNotificationsCount={unreadNotificationsCount}
+            unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
+          />
+          <div className="flex-1">
+            <AdminDashboard onBack={handleBackToHome} />
+          </div>
+        </div>
+        
+        {/* Mobile Layout */}
+        <div className="lg:hidden">
+          <div className="pb-16">
+            <AdminDashboard onBack={handleBackToHome} />
+          </div>
+          <BottomNavigation currentView="home" onMenuClick={handleMenuClick} />
+        </div>
+      </div>
+    );
+  }
+
   // 도움말 페이지
   if (currentView === 'help') {
     return (
@@ -908,6 +949,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1 max-w-2xl mx-auto p-6">
             <div className="flex items-center gap-4 mb-6">
@@ -974,6 +1016,7 @@ export default function App() {
             onMenuClick={handleMenuClick}
             unreadNotificationsCount={unreadNotificationsCount}
             unreadMessagesCount={unreadMessagesCount}
+            isAdmin={isAdmin}
           />
           <div className="flex-1 max-w-2xl mx-auto p-6">
             <div className="flex items-center gap-4 mb-6">

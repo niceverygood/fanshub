@@ -7,7 +7,8 @@ import {
   CreditCard, 
   User, 
   MoreHorizontal,
-  Plus
+  Plus,
+  Shield
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -16,6 +17,7 @@ interface SidebarProps {
   onMenuClick?: (menu: string) => void;
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
+  isAdmin?: boolean;
 }
 
 const menuItems = [
@@ -29,7 +31,7 @@ const menuItems = [
   { id: 'more', icon: MoreHorizontal, label: '더 보기' },
 ];
 
-export function Sidebar({ currentView = 'home', onMenuClick, unreadNotificationsCount = 0, unreadMessagesCount = 0 }: SidebarProps) {
+export function Sidebar({ currentView = 'home', onMenuClick, unreadNotificationsCount = 0, unreadMessagesCount = 0, isAdmin = false }: SidebarProps) {
   return (
     <div className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
@@ -66,6 +68,24 @@ export function Sidebar({ currentView = 'home', onMenuClick, unreadNotifications
               </Button>
             </li>
           ))}
+          
+          {/* 관리자 메뉴 */}
+          {isAdmin && (
+            <li>
+              <Button
+                variant={currentView === 'admin' ? "default" : "ghost"}
+                className={`w-full justify-start gap-3 h-12 ${
+                  currentView === 'admin' 
+                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                    : 'text-red-400 hover:bg-red-500/10'
+                }`}
+                onClick={() => onMenuClick?.('admin')}
+              >
+                <Shield className="h-5 w-5" />
+                <span className="flex-1 text-left">관리자</span>
+              </Button>
+            </li>
+          )}
         </ul>
       </nav>
 
