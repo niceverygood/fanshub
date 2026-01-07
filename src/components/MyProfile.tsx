@@ -83,36 +83,55 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
 
   // 내 피드 가져오기
   const fetchMyFeeds = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('No user ID, skipping feed fetch');
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     try {
-      console.log('Fetching feeds for user:', user.id);
+      console.log('=== Fetching feeds for user ===', user.id);
       const feeds = await getCreatorFeeds(user.id);
-      console.log('Fetched feeds:', feeds);
+      console.log('Fetched feeds count:', feeds?.length);
+      console.log('Fetched feeds data:', JSON.stringify(feeds, null, 2));
       
-      const formattedPosts: FeedPost[] = feeds.map(feed => ({
-        id: feed.id,
-        image: feed.media_urls?.[0] || undefined,
-        video: feed.media_type === 'video' ? feed.media_urls?.[0] : undefined,
-        mediaType: feed.media_type as 'image' | 'video' | undefined,
-        visibility: feed.is_premium ? 'paid' : 'free',
-        price: feed.price || null,
-        likes: feed.likes_count || 0,
-        content: feed.content_text || '',
-      }));
+      if (!feeds || feeds.length === 0) {
+        console.log('No feeds found for user');
+        setMyPosts([]);
+        setIsLoading(false);
+        return;
+      }
       
+      const formattedPosts: FeedPost[] = feeds.map(feed => {
+        console.log('Processing feed:', feed.id, 'content:', feed.content_text, 'media:', feed.media_urls);
+        return {
+          id: feed.id,
+          image: feed.media_urls?.[0] || undefined,
+          video: feed.media_type === 'video' ? feed.media_urls?.[0] : undefined,
+          mediaType: feed.media_type as 'image' | 'video' | undefined,
+          visibility: feed.is_premium ? 'paid' : 'free',
+          price: feed.price || null,
+          likes: feed.like_count || 0, // Fixed: was likes_count, should be like_count
+          content: feed.content_text || '',
+        };
+      });
+      
+      console.log('Formatted posts:', formattedPosts.length);
       setMyPosts(formattedPosts);
     } catch (error) {
       console.error('Error fetching feeds:', error);
       toast.error('피드를 불러오는 중 오류가 발생했습니다.');
+      setMyPosts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMyFeeds();
+    if (user?.id) {
+      fetchMyFeeds();
+    }
   }, [user?.id]);
 
   const [myProfile, setMyProfile] = useState({
