@@ -186,6 +186,7 @@ export default function App() {
   // 실제 피드를 FeedCard 형식으로 변환
   const transformedRealFeeds = realFeeds.map(feed => ({
     id: feed.id,
+    creatorId: feed.creator_id,  // 크리에이터 ID 추가
     creator: {
       name: feed.creator?.name || '알 수 없음',
       username: feed.creator?.username || 'unknown',
@@ -339,7 +340,7 @@ export default function App() {
     setCurrentView('profile');
   };
 
-  const handleNotificationNavigate = (type: 'profile' | 'feed', data: any) => {
+  const handleNotificationNavigate = (type: 'profile' | 'feed' | 'message', data: any) => {
     if (type === 'profile') {
       // 알림에서 온 사용자 정보를 기반으로 프로필 생성
       const notificationUser = {
@@ -362,8 +363,12 @@ export default function App() {
       setSelectedCreator(notificationUser);
       setCurrentView('profile');
     } else if (type === 'feed') {
-      // 피드 상세는 현재 구현되지 않았으므로, 크리에이터 프로필로 리다이렉트
-      handleNotificationNavigate('profile', data);
+      // 피드 상세 페이지로 이동
+      setSelectedFeed(data);
+      setCurrentView('feedDetail');
+    } else if (type === 'message') {
+      // 메시지 화면으로 이동
+      setCurrentView('messages');
     }
   };
 
@@ -1187,6 +1192,8 @@ export default function App() {
                 filteredFeeds.map((feed, index) => (
                   <FeedCard
                     key={feed.id || index}
+                    feedId={feed.id}
+                    creatorId={(feed as any).creatorId}
                     creator={feed.creator}
                     content={feed.content}
                     timestamp={feed.timestamp}
@@ -1195,6 +1202,7 @@ export default function App() {
                     onCreatorClick={handleViewProfile}
                     onFeedClick={handleFeedClick}
                     onBookmark={handleBookmarkFeed}
+                    onPurchaseSuccess={fetchHomeFeeds}
                   />
                 ))
               )}
@@ -1260,6 +1268,8 @@ export default function App() {
               filteredFeeds.map((feed, index) => (
                 <FeedCard
                   key={feed.id || index}
+                  feedId={feed.id}
+                  creatorId={(feed as any).creatorId}
                   creator={feed.creator}
                   content={feed.content}
                   timestamp={feed.timestamp}
@@ -1268,6 +1278,7 @@ export default function App() {
                   onCreatorClick={handleViewProfile}
                   onFeedClick={handleFeedClick}
                   onBookmark={handleBookmarkFeed}
+                  onPurchaseSuccess={fetchHomeFeeds}
                 />
               ))
             )}

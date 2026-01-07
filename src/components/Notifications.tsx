@@ -26,14 +26,14 @@ import {
 
 interface NotificationsProps {
   onBack: () => void;
-  onNavigate: (type: 'profile' | 'post', data: any) => void;
+  onNavigate: (type: 'profile' | 'feed' | 'message', data: any) => void;
 }
 
 export function Notifications({ onBack, onNavigate }: NotificationsProps) {
   const [activeTab, setActiveTab] = useState<NotificationTab>('all');
   const [clickedNotification, setClickedNotification] = useState<string | null>(null);
 
-  // Mock notifications data
+  // Mock notifications data with feed references
   const mockNotifications: Notification[] = [
     {
       id: '1',
@@ -47,7 +47,21 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
       message: '회원님의 게시물을 좋아합니다',
       timestamp: '5분 전',
       isRead: false,
-      postImage: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
+      postImage: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      feedId: 'feed-1',
+      feedData: {
+        creator: {
+          name: 'Sarah Kim',
+          username: 'sarahkim',
+          avatar: 'https://images.unsplash.com/photo-1551929175-f82f676827b8',
+          verified: true
+        },
+        content: {
+          text: "There's room for two in here. Consider this your invitation. 🎭",
+          image: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e'
+        },
+        timestamp: '5분 전'
+      }
     },
     {
       id: '2',
@@ -86,17 +100,31 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
       message: '회원님의 게시물에 댓글을 남겼습니다: "정말 멋져요!"',
       timestamp: '5시간 전',
       isRead: true,
-      postImage: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
+      postImage: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      feedId: 'feed-2',
+      feedData: {
+        creator: {
+          name: 'Emma Wilson',
+          username: 'emmaw',
+          avatar: 'https://images.unsplash.com/photo-1642263039799-7515d7143225',
+          verified: false
+        },
+        content: {
+          text: '새로운 포토세트가 준비되었어요 ✨',
+          image: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e'
+        },
+        timestamp: '5시간 전'
+      }
     },
     {
       id: '5',
-      type: 'mention',
+      type: 'message',
       user: {
         name: 'David Park',
         username: 'davidp',
         avatar: 'https://images.unsplash.com/photo-1551929175-f82f676827b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9maWxlJTIwd29tYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2NzUxNTN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
       },
-      message: '게시물에서 회원님을 언급했습니다',
+      message: '새로운 메시지를 보냈습니다: "안녕하세요!"',
       timestamp: '1일 전',
       isRead: true
     },
@@ -125,7 +153,21 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
       message: '새로운 게시물에서 회원님을 태그했습니다',
       timestamp: '3일 전',
       isRead: true,
-      postImage: 'https://images.unsplash.com/photo-1654370488609-02aa42d7a639?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdW1tZXIlMjBiZWFjaCUyMHdvbWFufGVufDF8fHx8MTc1ODY3NTQzMXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
+      postImage: 'https://images.unsplash.com/photo-1654370488609-02aa42d7a639?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdW1tZXIlMjBiZWFjaCUyMHdvbWFufGVufDF8fHx8MTc1ODY3NTQzMXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      feedId: 'feed-3',
+      feedData: {
+        creator: {
+          name: 'Fina',
+          username: 'soofina',
+          avatar: 'https://images.unsplash.com/photo-1551929175-f82f676827b8',
+          verified: true
+        },
+        content: {
+          text: '여름 바다에서 촬영한 사진들이에요 🌊',
+          image: 'https://images.unsplash.com/photo-1654370488609-02aa42d7a639'
+        },
+        timestamp: '3일 전'
+      }
     }
   ];
 
@@ -164,11 +206,6 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
   const handleNotificationClick = (notification: Notification) => {
     // 클릭 효과 표시
     setClickedNotification(notification.id);
-    
-    // 알림을 읽음으로 표시
-    const updatedNotifications = mockNotifications.map(n => 
-      n.id === notification.id ? { ...n, isRead: true } : n
-    );
 
     // 약간의 지연 후 네비게이션 (시각적 피드백을 위해)
     setTimeout(() => {
@@ -176,9 +213,22 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
       switch (notification.type) {
         case 'like':
         case 'comment':
+        case 'tag':
+          // 게시물 관련 알림은 피드 상세로 이동
+          if (notification.feedData) {
+            onNavigate('feed', notification.feedData);
+          } else {
+            // feedData가 없으면 사용자 프로필로 이동
+            onNavigate('profile', notification.user);
+          }
+          break;
         case 'mention':
-          // 게시물 관련 알림은 크리에이터 프로필로 이동 (게시물 상세가 없으므로)
-          onNavigate('profile', notification.user);
+          // 멘션 알림은 피드가 있으면 피드로, 없으면 프로필로
+          if (notification.feedData) {
+            onNavigate('feed', notification.feedData);
+          } else {
+            onNavigate('profile', notification.user);
+          }
           break;
         case 'subscribe':
         case 'tip':
@@ -186,18 +236,16 @@ export function Notifications({ onBack, onNavigate }: NotificationsProps) {
           onNavigate('profile', notification.user);
           break;
         case 'message':
-          // 메시지 알림은 해당 사용자 프로필로 이동
-          onNavigate('profile', notification.user);
+          // 메시지 알림은 메시지 화면으로 이동
+          onNavigate('message', notification.user);
           break;
         case 'promotion':
-          // 프로모션 알림은 현재 홈으로 이동 (프로모션 페이지가 없으므로)
+          // 프로모션 알림은 홈으로 이동
           onBack();
           break;
-        case 'tag':
-          // 태그 알림은 해당 게시물로 이동 (현재는 크리에이터 프로필로)
-          onNavigate('profile', notification.user);
-          break;
         default:
+          // 기본값: 사용자 프로필로 이동
+          onNavigate('profile', notification.user);
           break;
       }
       setClickedNotification(null);

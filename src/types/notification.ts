@@ -15,6 +15,23 @@ export type NotificationType =
   | 'promotion'
   | 'tag';
 
+export interface FeedData {
+  creator: {
+    name: string;
+    username: string;
+    avatar: string;
+    verified?: boolean;
+  };
+  content: {
+    text: string;
+    image?: string;
+    video?: string;
+  };
+  timestamp: string;
+  isBlurred?: boolean;
+  price?: number;
+}
+
 export interface Notification {
   id: string;
   type: NotificationType;
@@ -25,6 +42,8 @@ export interface Notification {
   postImage?: string;
   amount?: number; // for tips
   subscriptionTier?: string; // for subscriptions
+  feedId?: string; // 피드 ID (게시물 관련 알림용)
+  feedData?: FeedData; // 피드 상세 데이터 (네비게이션용)
 }
 
 export const NOTIFICATION_TABS = [

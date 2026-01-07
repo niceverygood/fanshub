@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Heart, MessageCircle, Bookmark, MoreHorizontal, Lock, DollarSign, Gift, BarChart3, Play, Video, Share2 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { PaymentDialog } from './PaymentDialog';
+import { ContentPurchaseDialog } from './ContentPurchaseDialog';
 import { TipGiftDialog } from './TipGiftDialog';
 import { PollQuizDialog } from './PollQuizDialog';
 import { toast } from 'sonner';
+import { hasPurchasedContent } from '../lib/api/paypal';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FeedCardProps {
+  feedId?: string;  // DB feed ID
+  creatorId?: string;  // DB creator ID
   creator: {
     name: string;
     username: string;
@@ -28,32 +32,61 @@ interface FeedCardProps {
   onCreatorClick?: (creator: any) => void;
   onFeedClick?: (feed: any) => void;
   onBookmark?: (feed: any) => void;
+  onPurchaseSuccess?: () => void;  // 구매 성공 콜백
 }
 
-export function FeedCard({ creator, content, timestamp, isBlurred = false, price, onCreatorClick, onFeedClick, onBookmark }: FeedCardProps) {
+export function FeedCard({ feedId, creatorId, creator, content, timestamp, isBlurred = false, price, onCreatorClick, onFeedClick, onBookmark, onPurchaseSuccess }: FeedCardProps) {
+  const { user } = useAuth();
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const [showTipDialog, setShowTipDialog] = useState(false);
   const [showPollDialog, setShowPollDialog] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 100) + 10);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [commentCount] = useState(Math.floor(Math.random() * 30) + 1);
+  const [isCheckingPurchase, setIsCheckingPurchase] = useState(false);
+
+  // 구매 여부 확인
+  useEffect(() => {
+    const checkPurchaseStatus = async () => {
+      if (!user?.id || !feedId || !isBlurred || !price) return;
+      
+      setIsCheckingPurchase(true);
+      try {
+        const purchased = await hasPurchasedContent(user.id, feedId);
+        if (purchased) {
+          setIsUnlocked(true);
+        }
+      } catch (error) {
+        console.error('Error checking purchase status:', error);
+      } finally {
+        setIsCheckingPurchase(false);
+      }
+    };
+    
+    checkPurchaseStatus();
+  }, [user?.id, feedId, isBlurred, price]);
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (price) {
-      setShowPaymentDialog(true);
+    if (price && feedId && creatorId) {
+      setShowPurchaseDialog(true);
+    } else if (price) {
+      // feedId가 없는 mock 데이터의 경우 결제 불가 메시지
+      toast.error('이 콘텐츠는 결제할 수 없습니다.');
     } else {
       setIsUnlocked(true);
     }
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePurchaseSuccess = () => {
     setIsUnlocked(true);
-    setShowPaymentDialog(false);
+    setShowPurchaseDialog(false);
+    toast.success('콘텐츠 구매가 완료되었습니다!');
+    onPurchaseSuccess?.();
   };
 
   const handleCreatorClick = (e: React.MouseEvent) => {
@@ -278,15 +311,21 @@ export function FeedCard({ creator, content, timestamp, isBlurred = false, price
         </div>
       </CardContent>
       
-      {/* Payment Dialog */}
-      {price && (
-        <PaymentDialog
-          open={showPaymentDialog}
-          onOpenChange={setShowPaymentDialog}
-          creator={creator}
-          price={price}
-          contentPreview={content.text}
-          onPaymentSuccess={handlePaymentSuccess}
+      {/* Content Purchase Dialog - 실제 PayPal 결제 */}
+      {price && feedId && creatorId && (
+        <ContentPurchaseDialog
+          isOpen={showPurchaseDialog}
+          onClose={() => setShowPurchaseDialog(false)}
+          content={{
+            id: feedId,
+            creatorId: creatorId,
+            creatorName: creator.name,
+            creatorAvatar: creator.avatar,
+            title: content.text.slice(0, 50) + (content.text.length > 50 ? '...' : ''),
+            price: price,
+            previewImage: content.image,
+          }}
+          onSuccess={handlePurchaseSuccess}
         />
       )}
       
