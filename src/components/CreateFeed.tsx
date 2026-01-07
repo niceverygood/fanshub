@@ -29,6 +29,11 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
   const [mediaTypes, setMediaTypes] = useState<('image' | 'video')[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Debug: Log state changes
+  console.log('[CreateFeed] Component rendered');
+  console.log('[CreateFeed] feedContent:', feedContent);
+  console.log('[CreateFeed] user:', user?.id);
+
   const visibilityOptions = [
     { value: 'free', label: 'Free', description: '누구나 볼 수 있음', icon: Users, color: '#6b7280' },
     { value: 'basic', label: 'Basic', description: 'Basic 구독자 이상', icon: Crown, color: '#64748b' },
@@ -199,7 +204,13 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
             <h1 className="font-semibold text-foreground">새 피드 작성</h1>
           </div>
           <Button 
-            onClick={handlePost}
+            onClick={() => {
+              console.log('Button clicked!');
+              console.log('feedContent:', feedContent);
+              console.log('selectedMedia:', selectedMedia.length);
+              console.log('isSubmitting:', isSubmitting);
+              handlePost();
+            }}
             disabled={isSubmitting || (!feedContent.trim() && selectedMedia.length === 0)}
             className="bg-primary hover:bg-primary/90"
           >
