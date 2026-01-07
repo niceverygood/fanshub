@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { BottomNavigation } from './components/BottomNavigation';
 import { TopHeader } from './components/TopHeader';
@@ -17,8 +17,10 @@ import LoginPage from './components/LoginPage';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import { getHomeFeeds } from './lib/api/feeds';
+import type { FeedWithCreator } from './types/database';
 
 const mockFeeds = [
   {
@@ -148,13 +150,74 @@ export default function App() {
   const [subscribedCreators, setSubscribedCreators] = useState<any[]>([]);
   const [savedCollections, setSavedCollections] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredFeeds, setFilteredFeeds] = useState(mockFeeds);
+  
+  // 실제 Supabase에서 가져온 피드
+  const [realFeeds, setRealFeeds] = useState<FeedWithCreator[]>([]);
+  const [isLoadingFeeds, setIsLoadingFeeds] = useState(false);
   
   // 읽지 않은 알림 수 (실제로는 백엔드에서 가져올 값)
   const unreadNotificationsCount = 2;
   
   // 읽지 않은 메시지 수 (실제로는 백엔드에서 가져올 값)
   const unreadMessagesCount = 4;
+  
+  // 홈 피드 가져오기
+  const fetchHomeFeeds = async () => {
+    setIsLoadingFeeds(true);
+    try {
+      console.log('=== Fetching home feeds ===');
+      const feeds = await getHomeFeeds(user?.id);
+      console.log('Fetched home feeds:', feeds?.length);
+      setRealFeeds(feeds || []);
+    } catch (error) {
+      console.error('Error fetching home feeds:', error);
+    } finally {
+      setIsLoadingFeeds(false);
+    }
+  };
+  
+  // 컴포넌트 마운트 시 피드 가져오기
+  useEffect(() => {
+    if (user) {
+      fetchHomeFeeds();
+    }
+  }, [user?.id]);
+  
+  // 실제 피드를 FeedCard 형식으로 변환
+  const transformedRealFeeds = realFeeds.map(feed => ({
+    id: feed.id,
+    creator: {
+      name: feed.creator?.name || '알 수 없음',
+      username: feed.creator?.username || 'unknown',
+      avatar: feed.creator?.avatar_url || 'https://images.unsplash.com/photo-1551929175-f82f676827b8',
+      verified: feed.creator?.is_verified || false,
+    },
+    content: {
+      text: feed.content_text || '',
+      image: feed.media_type === 'image' ? feed.media_urls?.[0] : undefined,
+      video: feed.media_type === 'video' ? feed.media_urls?.[0] : undefined,
+      mediaType: feed.media_type as 'image' | 'video' | undefined,
+    },
+    timestamp: new Date(feed.created_at).toLocaleDateString('ko-KR', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    isBlurred: feed.is_premium && !feed.is_purchased,
+    price: feed.price || undefined,
+  }));
+  
+  // 모든 피드 (실제 피드 + mock 피드)
+  const allFeeds = [...transformedRealFeeds, ...mockFeeds];
+  
+  // 검색 필터링된 피드
+  const filteredFeeds = searchQuery.trim() === ''
+    ? allFeeds
+    : allFeeds.filter(feed => 
+        feed.creator.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feed.creator.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feed.content.text.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   // 로딩 중일 때 표시
   if (loading) {
@@ -173,16 +236,7 @@ export default function App() {
   // 검색 핸들러
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (query.trim() === '') {
-      setFilteredFeeds(mockFeeds);
-    } else {
-      const filtered = mockFeeds.filter(feed => 
-        feed.creator.name.toLowerCase().includes(query.toLowerCase()) ||
-        feed.creator.username.toLowerCase().includes(query.toLowerCase()) ||
-        feed.content.text.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredFeeds(filtered);
-    }
+    // filteredFeeds는 이제 computed value이므로 별도의 setState가 필요없음
   };
   
   // 북마크 저장 핸들러
@@ -803,6 +857,12 @@ export default function App() {
   }
 
   if (currentView === 'create') {
+    const handlePostSuccess = () => {
+      // 피드 새로고침 후 홈으로 이동
+      fetchHomeFeeds();
+      handleBackToHome();
+    };
+
     return (
       <div className="min-h-screen bg-background">
         {/* Desktop Layout */}
@@ -817,7 +877,7 @@ export default function App() {
           <div className="flex-1">
             <CreateFeed 
               onBack={handleBackToHome}
-              onPost={handleBackToHome}
+              onPost={handlePostSuccess}
             />
           </div>
         </div>
@@ -832,7 +892,7 @@ export default function App() {
             />
             <CreateFeed 
               onBack={handleBackToHome}
-              onPost={handleBackToHome}
+              onPost={handlePostSuccess}
             />
           </div>
           <BottomNavigation currentView={currentView} onMenuClick={handleMenuClick} />
@@ -1112,7 +1172,12 @@ export default function App() {
 
             {/* Posts */}
             <div className="p-4">
-              {filteredFeeds.length === 0 ? (
+              {isLoadingFeeds ? (
+                <div className="text-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
+                  <p className="text-muted-foreground">피드를 불러오는 중...</p>
+                </div>
+              ) : filteredFeeds.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🔍</div>
                   <h3 className="text-lg font-medium text-foreground mb-2">검색 결과가 없습니다</h3>
@@ -1121,7 +1186,7 @@ export default function App() {
               ) : (
                 filteredFeeds.map((feed, index) => (
                   <FeedCard
-                    key={index}
+                    key={feed.id || index}
                     creator={feed.creator}
                     content={feed.content}
                     timestamp={feed.timestamp}
@@ -1180,7 +1245,12 @@ export default function App() {
           
           {/* Posts */}
           <div className="p-4">
-            {filteredFeeds.length === 0 ? (
+            {isLoadingFeeds ? (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
+                <p className="text-muted-foreground">피드를 불러오는 중...</p>
+              </div>
+            ) : filteredFeeds.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🔍</div>
                 <h3 className="text-lg font-medium text-foreground mb-2">검색 결과가 없습니다</h3>
@@ -1189,7 +1259,7 @@ export default function App() {
             ) : (
               filteredFeeds.map((feed, index) => (
                 <FeedCard
-                  key={index}
+                  key={feed.id || index}
                   creator={feed.creator}
                   content={feed.content}
                   timestamp={feed.timestamp}
