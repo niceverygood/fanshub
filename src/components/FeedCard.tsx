@@ -154,30 +154,30 @@ export function FeedCard({ feedId, creatorId, creator, content, timestamp, isBlu
     <Card className="bg-card border-border mb-6 cursor-pointer hover:bg-card/80 transition-colors" onClick={handleFeedClick}>
       <CardContent className="p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={handleCreatorClick}>
-            <Avatar className="h-10 w-10">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={handleCreatorClick}>
+            <Avatar className="h-10 w-10 flex-shrink-0">
               <AvatarImage src={creator.avatar} alt={creator.name} />
               <AvatarFallback>{creator.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1">
-                <span className="font-medium text-card-foreground hover:text-primary transition-colors">{creator.name}</span>
+                <span className="font-medium text-card-foreground hover:text-primary transition-colors truncate">{creator.name}</span>
                 {creator.verified && (
-                  <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                  <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-xs text-white">✓</span>
                   </div>
                 )}
               </div>
-              <span className="text-sm text-muted-foreground">@{creator.username}</span>
+              <span className="text-sm text-muted-foreground truncate block">@{creator.username}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {price && (
-              <span className="text-sm font-medium text-primary">${price}</span>
+              <span className="text-xs sm:text-sm font-medium text-primary whitespace-nowrap">${price}</span>
             )}
-            <span className="text-sm text-muted-foreground">{timestamp}</span>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{timestamp}</span>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </div>
