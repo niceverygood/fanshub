@@ -22,6 +22,7 @@ import { useAuth } from './contexts/AuthContext';
 import { getHomeFeeds } from './lib/api/feeds';
 import type { FeedWithCreator } from './types/database';
 
+// 샘플 피드 데이터 (무료 콘텐츠만 - 유료 피드는 DB에서 생성)
 const mockFeeds = [
   {
     creator: {
@@ -35,8 +36,7 @@ const mockFeeds = [
       image: 'https://images.unsplash.com/photo-1627808869239-e68ec6e9b63e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBjb250ZW50JTIwcGhvdG98ZW58MXx8fHwxNzU4Njc1MTU2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
     },
     timestamp: '9월 12, 2024',
-    isBlurred: true,
-    price: 15,
+    isBlurred: false,
   },
   {
     creator: {
@@ -50,8 +50,7 @@ const mockFeeds = [
       image: 'https://images.unsplash.com/photo-1624948456761-0f2660d3dc5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMGluZmx1ZW5jZXIlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NTg2MjI4MTB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
     },
     timestamp: '9월 20, 2024',
-    isBlurred: true,
-    price: 25,
+    isBlurred: false,
   },
   {
     creator: {
@@ -66,8 +65,7 @@ const mockFeeds = [
       mediaType: 'video' as const,
     },
     timestamp: '9월 23, 2024',
-    isBlurred: true,
-    price: 12,
+    isBlurred: false,
   },
   {
     creator: {
@@ -94,8 +92,7 @@ const mockFeeds = [
       mediaType: 'video' as const,
     },
     timestamp: '9월 19, 2024',
-    isBlurred: true,
-    price: 18,
+    isBlurred: false,
   },
   {
     creator: {
@@ -109,8 +106,7 @@ const mockFeeds = [
       image: 'https://images.unsplash.com/photo-1646528192559-c163a2803f52?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2RlbCUyMHBvcnRyYWl0JTIwc3R1ZGlvfGVufDF8fHx8MTc1ODY3NTE3Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
     },
     timestamp: '9월 18, 2024',
-    isBlurred: true,
-    price: 10,
+    isBlurred: false,
   },
 ];
 
