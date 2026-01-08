@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { SubscriptionSettings } from './SubscriptionSettings';
-import { CreatePost } from './CreatePost';
+import { CreateFeed } from './CreateFeed';
 import { RequestSystem } from './RequestSystem';
 import { EditProfileDialog } from './EditProfileDialog';
 import { toast } from 'sonner';
@@ -194,7 +194,7 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
 
   if (showCreatePost) {
     return (
-      <CreatePost 
+      <CreateFeed 
         onBack={() => setShowCreatePost(false)}
         onPost={() => {
           setShowCreatePost(false);
