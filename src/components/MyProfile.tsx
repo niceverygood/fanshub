@@ -131,6 +131,9 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
   useEffect(() => {
     if (user?.id) {
       fetchMyFeeds();
+    } else {
+      // user가 없으면 로딩 중지
+      setIsLoading(false);
     }
   }, [user?.id]);
 
