@@ -159,6 +159,9 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
       console.log('Feed data to insert:', feedData);
 
       // 피드 생성
+      console.log('Inserting feed with creator_id:', feedData.creator_id);
+      console.log('Current auth user:', (await supabase.auth.getUser()).data.user?.id);
+      
       const { data, error } = await supabase
         .from('feeds')
         .insert(feedData)
@@ -172,6 +175,14 @@ export function CreateFeed({ onBack, onPost }: CreateFeedProps) {
         console.error('Error code:', error.code);
         console.error('Error message:', error.message);
         console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        
+        // RLS 정책 문제일 경우 상세 메시지
+        if (error.code === '42501' || error.message?.includes('policy')) {
+          toast.error('권한 오류: 피드를 생성할 권한이 없습니다. 다시 로그인해주세요.');
+        } else {
+          toast.error(`피드 생성 실패: ${error.message}`);
+        }
         throw error;
       }
 
