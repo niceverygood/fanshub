@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -90,21 +90,27 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
     }
     
     setIsLoading(true);
+    
+    // 10초 타임아웃 설정
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout')), 10000);
+    });
+    
     try {
       console.log('=== Fetching feeds for user ===', user.id);
-      const feeds = await getCreatorFeeds(user.id);
+      const feeds = await Promise.race([
+        getCreatorFeeds(user.id),
+        timeoutPromise
+      ]);
       console.log('Fetched feeds count:', feeds?.length);
-      console.log('Fetched feeds data:', JSON.stringify(feeds, null, 2));
       
       if (!feeds || feeds.length === 0) {
         console.log('No feeds found for user');
         setMyPosts([]);
-        setIsLoading(false);
         return;
       }
       
       const formattedPosts: FeedPost[] = feeds.map(feed => {
-        console.log('Processing feed:', feed.id, 'content:', feed.content_text, 'media:', feed.media_urls);
         return {
           id: feed.id,
           image: feed.media_urls?.[0] || undefined,
@@ -112,24 +118,37 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
           mediaType: feed.media_type as 'image' | 'video' | undefined,
           visibility: feed.is_premium ? 'paid' : 'free',
           price: feed.price || null,
-          likes: feed.like_count || 0, // Fixed: was likes_count, should be like_count
+          likes: feed.like_count || 0,
           content: feed.content_text || '',
         };
       });
       
       console.log('Formatted posts:', formattedPosts.length);
       setMyPosts(formattedPosts);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching feeds:', error);
-      toast.error('피드를 불러오는 중 오류가 발생했습니다.');
+      if (error.message === 'Timeout') {
+        toast.error('피드 로딩 시간이 초과되었습니다. 새로고침해주세요.');
+      } else {
+        toast.error('피드를 불러오는 중 오류가 발생했습니다.');
+      }
       setMyPosts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const hasFetchedRef = useRef(false);
+  
   useEffect(() => {
+    // 이미 호출되었으면 스킵 (React Strict Mode 중복 방지)
+    if (hasFetchedRef.current && myPosts.length > 0) {
+      setIsLoading(false);
+      return;
+    }
+    
     if (user?.id) {
+      hasFetchedRef.current = true;
       fetchMyFeeds();
     } else {
       // user가 없으면 로딩 중지
