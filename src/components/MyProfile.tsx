@@ -9,6 +9,7 @@ import { SubscriptionSettings } from './SubscriptionSettings';
 import { CreateFeed } from './CreateFeed';
 import { RequestSystem } from './RequestSystem';
 import { EditProfileDialog } from './EditProfileDialog';
+import { FeedDetail } from './FeedDetail';
 import { toast } from 'sonner';
 import { 
   ArrowLeft, 
@@ -62,6 +63,7 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [myPosts, setMyPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFeed, setSelectedFeed] = useState<FeedPost | null>(null);
   const [cards, setCards] = useState([
     {
       id: '1',
@@ -235,6 +237,32 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
     );
   }
 
+  // 피드 상세 보기
+  if (selectedFeed) {
+    return (
+      <FeedDetail
+        feed={{
+          creator: {
+            name: myProfile.name,
+            username: myProfile.username,
+            avatar: myProfile.avatar,
+            verified: myProfile.verified,
+          },
+          content: {
+            text: selectedFeed.content || '',
+            image: selectedFeed.image,
+            video: selectedFeed.video,
+            mediaType: selectedFeed.mediaType,
+          },
+          timestamp: '최근',
+          isBlurred: selectedFeed.visibility === 'paid' && !!selectedFeed.price,
+          price: selectedFeed.price || undefined,
+        }}
+        onBack={() => setSelectedFeed(null)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -361,7 +389,11 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
           ) : (
             <div className="grid grid-cols-3 gap-1">
               {myPosts.map((post) => (
-                <div key={post.id} className="relative group">
+                <div 
+                  key={post.id} 
+                  className="relative group cursor-pointer"
+                  onClick={() => setSelectedFeed(post)}
+                >
                   {post.video || post.mediaType === 'video' ? (
                     <div className="relative">
                       <video
@@ -420,7 +452,11 @@ export function MyProfile({ onBack, onEarningsClick, onHelpClick, onPrivacyClick
           {/* Media Grid */}
           <div className="grid grid-cols-3 gap-1">
             {myPosts.map((post) => (
-              <div key={post.id} className="relative group aspect-square">
+              <div 
+                key={post.id} 
+                className="relative group aspect-square cursor-pointer"
+                onClick={() => setSelectedFeed(post)}
+              >
                 {post.video || post.mediaType === 'video' ? (
                   <div className="relative h-full">
                     <video
